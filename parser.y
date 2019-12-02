@@ -30,11 +30,15 @@ void yyerror(char *s);
 %type <expression> expression
 
 %destructor {
-	printf("Destruction expression or predicate\n");
+	printf("Destruction expression\n");
 	$$->print();
 	printf("\n");
 	delete ($$);
 } <expression>
+
+%destructor {
+	delete $$;
+} <pred>
 
 %start expression
 
