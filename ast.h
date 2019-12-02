@@ -52,8 +52,16 @@ public:
         }
     }
 
-    void         print() override { printf("Setting %s to %i", pred.c_str(), value); }
-    virtual void exec(EvaluationContext &ec)
+    void print() override
+    {
+        if (value.index() == 0) {
+            printf("Setting %s to %s", pred.c_str(), std::get<bool>(value) ? "tt" : "ff");
+        } else {
+            printf("Setting %s to ", pred.c_str());
+            std::get<Expression *>(value)->print();
+        }
+    }
+    virtual void exec(EvaluationContext &ec) override
     {
         if (value.index() == 0) {
             ec.predicates[pred] = std::get<bool>(value);
