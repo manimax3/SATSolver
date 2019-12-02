@@ -10,9 +10,12 @@ void yyerror(char *s);
 #include "ast.h"
 }
 
-%union {
-	struct Expression *expression;
+%union { 
+	StatementList *stmtlist;
+	Statement *stmt;
+	Expression *expression;
 	std::string* pred;
+	bool value;
 }
 
 %token IMPLICATION
@@ -27,7 +30,14 @@ void yyerror(char *s);
 %left AND
 %precedence NEGATION
 
+
+%token TRUE
+%token FALSE
+%token SET
+
 %type <expression> expression
+%type <stmt> setstmt stmt
+%type <stmtlist> stmtlist
 
 %destructor {
 	printf("Destruction expression\n");
@@ -38,11 +48,25 @@ void yyerror(char *s);
 
 %destructor {
 	delete $$;
-} <pred>
+} <pred> <stmt> 
 
-%start expression
+%destructor {
+	$$->print();
+	delete $$;
+} <stmtlist>
+
+%start stmtlist
 
 %%
+stmtlist : stmt { $$ = new StatementList($1); }
+	 | stmtlist stmt { $$ = new StatementList(*$1, $2); delete $1; }
+
+stmt : setstmt ';'
+	 | expression ';' { $$ = static_cast<Statement*>($1);}
+
+setstmt : SET ':' PREDICATE TRUE { $$ = new SetStatement(*$3, true); delete $3; }
+		| SET ':' PREDICATE FALSE { $$ = new SetStatement(*$3, false); delete $3; }
+
 expression : PREDICATE {$$ = new PredExpression(*$1); delete $1;}
 		   | expression IMPLICATION expression {$$ = new ImplExpression($1, $3);}
 		   | expression BIIMPLICATION expression {$$ = new BiImplExpression($1, $3);}

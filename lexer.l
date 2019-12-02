@@ -11,6 +11,11 @@ int yylex();
 "or" {return OR;}
 "¬"|"not" {return NEGATION;}
 
+"true"|"tt" { return TRUE; }
+"false"|"ff" { return FALSE; }
+
+"SET"|"set" { return SET; }
+
 [a-zA-Z]([0-9])* {yylval.pred = new std::string(yytext); return PREDICATE;}
 [ \t\n] {;}
 . { return *yytext;}
