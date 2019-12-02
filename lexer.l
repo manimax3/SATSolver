@@ -1,5 +1,5 @@
 %{
-#include "test.tab.h"
+#include "parser.hpp"
 int yylex();
 %}
 
