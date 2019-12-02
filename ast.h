@@ -178,7 +178,7 @@ class PrintStatement : public Statement {
 
     void exec(EvaluationContext &ec) override {
 	expr->print();
-	printf(" ==> %i\n", expr->eval(ec));
+	printf(" ==> %s\n", expr->eval(ec) ? "tt" : "ff");
     }
 
     ~PrintStatement() {
