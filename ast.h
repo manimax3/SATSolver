@@ -1,12 +1,18 @@
 #pragma once
 #include <cstdio>
+#include <map>
 #include <string>
 #include <vector>
+
+struct EvaluationContext {
+    std::map<std::string, bool> predicates;
+};
 
 class Statement {
    public:
     virtual ~Statement() = default;
     virtual void print(){};
+    virtual void exec(EvaluationContext &ec) {}
 };
 
 class SetStatement : public Statement {
@@ -15,6 +21,7 @@ class SetStatement : public Statement {
 	: pred(pred), value(value) {}
 
     void print() override { printf("Setting %s to %i", pred.c_str(), value); }
+    virtual void exec(EvaluationContext &ec) { ec.predicates[pred] = value; }
 
    private:
     std::string pred;
@@ -24,6 +31,8 @@ class SetStatement : public Statement {
 class Expression : public Statement {
    public:
     virtual ~Expression() = default;
+    void exec(EvaluationContext &ec) {}
+    virtual int eval(EvaluationContext &ec) = 0;
     virtual void print(){};
 };
 
@@ -31,6 +40,7 @@ class PredExpression : public Expression {
    public:
     PredExpression(const std::string &name) : name(name) {}
     void print() override { printf("%s", name.c_str()); }
+    int eval(EvaluationContext &ec) override { return ec.predicates[name]; }
 
    private:
     std::string name;
@@ -44,12 +54,17 @@ class ImplExpression : public Expression {
 	if (lhs) delete lhs;
 	if (rhs) delete rhs;
     }
+
     void print() override {
 	printf("(");
 	lhs->print();
 	printf(" -> ");
 	rhs->print();
 	printf(")");
+    }
+
+    int eval(EvaluationContext &ec) override {
+	return (!lhs->eval(ec)) || rhs->eval(ec);
     }
 
    private:
@@ -64,12 +79,20 @@ class BiImplExpression : public Expression {
 	if (lhs) delete lhs;
 	if (rhs) delete rhs;
     }
+
     void print() override {
 	printf("(");
 	lhs->print();
 	printf(" <-> ");
 	rhs->print();
 	printf(")");
+    }
+
+    int eval(EvaluationContext &ec) override {
+	const auto a = lhs->eval(ec);
+	const auto b = rhs->eval(ec);
+
+	return a == b;
     }
 
    private:
@@ -84,12 +107,17 @@ class AndExpression : public Expression {
 	if (lhs) delete lhs;
 	if (rhs) delete rhs;
     }
+
     void print() override {
 	printf("(");
 	lhs->print();
 	printf(" and ");
 	rhs->print();
 	printf(")");
+    }
+
+    int eval(EvaluationContext &ec) override {
+	return lhs->eval(ec) && rhs->eval(ec);
     }
 
    private:
@@ -112,6 +140,10 @@ class OrExpression : public Expression {
 	printf(")");
     }
 
+    int eval(EvaluationContext &ec) override {
+	return lhs->eval(ec) || rhs->eval(ec);
+    }
+
    private:
     Expression *lhs = nullptr, *rhs = nullptr;
 };
@@ -129,8 +161,32 @@ class NegExpression : public Expression {
 	printf(")");
     }
 
+    int eval(EvaluationContext &ec) override { return !other->eval(ec); }
+
    private:
     Expression *other = nullptr;
+};
+
+class PrintStatement : public Statement {
+   public:
+    PrintStatement(Expression *expr) : expr(expr) {}
+
+    void print() override {
+	printf("Printing the result of: ");
+	expr->print();
+    }
+
+    void exec(EvaluationContext &ec) override {
+	expr->print();
+	printf(" ==> %i\n", expr->eval(ec));
+    }
+
+    ~PrintStatement() {
+	if (expr) delete expr;
+    }
+
+   private:
+    Expression *expr = nullptr;
 };
 
 class StatementList {
@@ -151,11 +207,11 @@ class StatementList {
 	}
     }
 
-    void print() {
+    void run() {
+	EvaluationContext ec;
 	for (auto stmt : statements) {
 	    if (stmt) {
-		printf("\n");
-		stmt->print();
+		stmt->exec(ec);
 	    }
 	}
 	printf("\n");

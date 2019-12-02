@@ -34,24 +34,18 @@ void yyerror(char *s);
 %token TRUE
 %token FALSE
 %token SET
+%token PRINT
 
 %type <expression> expression
-%type <stmt> setstmt stmt
+%type <stmt> setstmt printstmt stmt
 %type <stmtlist> stmtlist
 
 %destructor {
-	printf("Destruction expression\n");
-	$$->print();
-	printf("\n");
-	delete ($$);
-} <expression>
-
-%destructor {
 	delete $$;
-} <pred> <stmt> 
+} <pred> <stmt> <expression>
 
 %destructor {
-	$$->print();
+	$$->run();
 	delete $$;
 } <stmtlist>
 
@@ -62,10 +56,13 @@ stmtlist : stmt { $$ = new StatementList($1); }
 	 | stmtlist stmt { $$ = new StatementList(*$1, $2); delete $1; }
 
 stmt : setstmt ';'
+	 | printstmt ';'
 	 | expression ';' { $$ = static_cast<Statement*>($1);}
 
 setstmt : SET ':' PREDICATE TRUE { $$ = new SetStatement(*$3, true); delete $3; }
 		| SET ':' PREDICATE FALSE { $$ = new SetStatement(*$3, false); delete $3; }
+
+printstmt : PRINT ':' expression { $$ = new PrintStatement($3); }
 
 expression : PREDICATE {$$ = new PredExpression(*$1); delete $1;}
 		   | expression IMPLICATION expression {$$ = new ImplExpression($1, $3);}
