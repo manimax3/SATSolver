@@ -16,4 +16,4 @@ add_custom_command(OUTPUT lexer.cpp
 
 add_executable(satsolver satsolver.cpp parser.cpp lexer.cpp)
 
-target_include_directories(satsolver PRIVATE ${CMAKE_BINARY_DIR})
+target_include_directories(satsolver PRIVATE ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR})
