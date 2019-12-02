@@ -1,7 +1,15 @@
 #pragma once
 #include <cstdio>
 
-inline int subtract_one(int input) {
-	printf("You called me %d\n", input);
-	return input - 1;
-}
+class Expression {
+   public:
+    Expression(Expression *lhs, Expression *rhs) : lhs(lhs), rhs(rhs) {}
+
+    ~Expression() {
+	if (lhs) delete lhs;
+	if (rhs) delete rhs;
+    }
+
+   private:
+    Expression *lhs, *rhs;
+};

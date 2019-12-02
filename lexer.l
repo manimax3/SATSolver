@@ -1,11 +1,13 @@
 %{
 #include "parser.hpp"
+#include <string>
 int yylex();
 %}
 
 %%
-"print" {printf("Found print\n"); return print;}
-[0-9]+ {yylval.num = atoi(yytext); printf("Number: %i\n", yylval.num); return number;}
+"impl" {return IMPLICATION;}
+"and" {return AND;}
+[a-zA-Z]([0-9])* {yylval.pred = new std::string(yytext); return PREDICATE;}
 [ \t\n] {;}
 . {ECHO; return *yytext;}
 %%
