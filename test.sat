@@ -17,10 +17,10 @@ set: p4 true;
 
 print: p1 or p2;
 
-p1 and p2 or p3 and not p4;
-p1 and p2 or p3 and not p4;
-p1 and p2 or p3 and not p4;
-p1 and p2 or p3 and not p4;
-p1 and p2 or p3 and not p4;
-p1 and p2 or p3 and not p4;
-p1 and p2 or p3 and not p4;
+print p1 and p2 or p3 and not p4;
+print p1 and p2 or p3 and not p4;
+print p1 and p2 or p3 and not p4;
+print p1 and p2 or p3 and not p4;
+print p1 and p2 or p3 and not p4;
+print p1 and p2 or p3 and not p4;
+print p1 and p2 or p3 and not p4;
