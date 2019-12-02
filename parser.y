@@ -61,10 +61,16 @@ stmt : setstmt ';'
 
 setstmt : SET ':' PREDICATE TRUE { $$ = new SetStatement(*$3, true); delete $3; }
 		| SET ':' PREDICATE FALSE { $$ = new SetStatement(*$3, false); delete $3; }
+		| SET PREDICATE TRUE { $$ = new SetStatement(*$2, true); delete $2; }
+		| SET PREDICATE FALSE { $$ = new SetStatement(*$2, false); delete $2; }
+		| SET PREDICATE ':' expression { $$ = new SetStatement(*$2, $4); delete $2;}
 
 printstmt : PRINT ':' expression { $$ = new PrintStatement($3); }
+		  | PRINT expression { $$ = new PrintStatement($2); }
 
 expression : PREDICATE {$$ = new PredExpression(*$1); delete $1;}
+		   | TRUE { $$ = new ConstantExpression(true); }
+		   | FALSE { $$ = new ConstantExpression(false); }
 		   | expression IMPLICATION expression {$$ = new ImplExpression($1, $3);}
 		   | expression BIIMPLICATION expression {$$ = new BiImplExpression($1, $3);}
 		   | expression AND expression {$$ = new AndExpression($1, $3);}

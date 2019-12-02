@@ -2,7 +2,15 @@
 #include <cstdio>
 #include <map>
 #include <string>
+#include <variant>
 #include <vector>
+
+template<class... Ts>
+struct overloaded : Ts... {
+    using Ts::operator()...;
+};
+template<class... Ts>
+overloaded(Ts...)->overloaded<Ts...>;
 
 struct EvaluationContext {
     std::map<std::string, bool> predicates;
@@ -15,6 +23,14 @@ public:
     virtual void exec(EvaluationContext &ec) {}
 };
 
+class Expression : public Statement {
+public:
+    virtual ~Expression() = default;
+    void         exec(EvaluationContext &ec) {}
+    virtual int  eval(EvaluationContext &ec) = 0;
+    virtual void print(){};
+};
+
 class SetStatement : public Statement {
 public:
     SetStatement(const std::string &pred, bool value)
@@ -23,20 +39,32 @@ public:
     {
     }
 
+    SetStatement(const std::string &pred, Expression *expr)
+        : pred(pred)
+        , value(expr)
+    {
+    }
+
+    ~SetStatement()
+    {
+        if (value.index() == 1) {
+            delete std::get<Expression *>(value);
+        }
+    }
+
     void         print() override { printf("Setting %s to %i", pred.c_str(), value); }
-    virtual void exec(EvaluationContext &ec) { ec.predicates[pred] = value; }
+    virtual void exec(EvaluationContext &ec)
+    {
+        if (value.index() == 0) {
+            ec.predicates[pred] = std::get<bool>(value);
+        } else {
+            ec.predicates[pred] = std::get<Expression *>(value)->eval(ec);
+        }
+    }
 
 private:
-    std::string pred;
-    bool        value;
-};
-
-class Expression : public Statement {
-public:
-    virtual ~Expression() = default;
-    void         exec(EvaluationContext &ec) {}
-    virtual int  eval(EvaluationContext &ec) = 0;
-    virtual void print(){};
+    std::string                      pred;
+    std::variant<bool, Expression *> value;
 };
 
 class PredExpression : public Expression {
@@ -50,6 +78,20 @@ public:
 
 private:
     std::string name;
+};
+
+class ConstantExpression : public Expression {
+public:
+    ConstantExpression(bool value)
+        : value(value)
+    {
+    }
+
+    void print() override { printf("%s", value ? "tt" : "ff"); }
+    int  eval(EvaluationContext &) override { return value; }
+
+private:
+    bool value;
 };
 
 class ImplExpression : public Expression {
