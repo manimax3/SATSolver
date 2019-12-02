@@ -17,7 +17,7 @@ int yylex();
 "SET"|"set" { return SET; }
 "PRINT"|"print" {return PRINT; }
 
-[a-zA-Z]([0-9])* {yylval.pred = new std::string(yytext); return PREDICATE;}
+[a-zA-Z]([a-zA-Z0-9])* {yylval.pred = new std::string(yytext); return PREDICATE;}
 [ \t\n] {;}
 . { return *yytext;}
 %%
