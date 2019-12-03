@@ -18,6 +18,6 @@ add_custom_command(OUTPUT lexer.cpp
 				   COMMAND ${FLEX_EXECUTABLE} -o lexer.cpp ${CMAKE_SOURCE_DIR}/lexer.l
 				   COMMENT "Generating the lexer")
 
-add_executable(satsolver satsolver.cpp parser.hpp parser.cpp lexer.cpp)
+add_executable(satsolver satsolver.cpp parser.hpp parser.cpp lexer.cpp ast.cpp)
 
 target_include_directories(satsolver PRIVATE ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR})

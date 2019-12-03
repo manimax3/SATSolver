@@ -56,22 +56,22 @@ stmt : setstmt ';'
 	 | printstmt ';'
 	 | expression ';' { $$ = static_cast<Statement*>($1);}
 
-setstmt : SET ':' PREDICATE TRUE { $$ = new SetStatement($3, true); }
-		| SET ':' PREDICATE FALSE { $$ = new SetStatement($3, false); }
-		| SET PREDICATE TRUE { $$ = new SetStatement($2, true); }
-		| SET PREDICATE FALSE { $$ = new SetStatement($2, false); }
-		| SET PREDICATE ':' expression { $$ = new SetStatement($2, $4); }
+setstmt : SET ':' PREDICATE TRUE { $$ = new Statement($3, new ConstantExpression(true)); }
+		| SET ':' PREDICATE FALSE { $$ = new Statement($3, new ConstantExpression(false)); }
+		| SET PREDICATE TRUE { $$ = new Statement($2, new ConstantExpression(false)); }
+		| SET PREDICATE FALSE { $$ = new Statement($2, new ConstantExpression(false)); }
+		| SET PREDICATE ':' expression { $$ = new Statement($2, $4); }
 
-printstmt : PRINT ':' expression { $$ = new PrintStatement($3); }
-		  | PRINT expression { $$ = new PrintStatement($2); }
+printstmt : PRINT ':' expression { $$ = new Statement($3); }
+		  | PRINT expression { $$ = new Statement($2); }
 
 expression : PREDICATE {$$ = new PredExpression($1); }
 		   | TRUE { $$ = new ConstantExpression(true); }
 		   | FALSE { $$ = new ConstantExpression(false); }
-		   | expression IMPLICATION expression {$$ = new ImplExpression($1, $3);}
-		   | expression BIIMPLICATION expression {$$ = new BiImplExpression($1, $3);}
-		   | expression AND expression {$$ = new AndExpression($1, $3);}
-		   | expression OR expression {$$ = new OrExpression($1, $3);}
+		   | expression IMPLICATION expression {$$ = new BinaryExpression($1, $3, BinaryExpression::Impl);}
+		   | expression BIIMPLICATION expression {$$ = new BinaryExpression($1, $3, BinaryExpression::BiImpl);}
+		   | expression AND expression {$$ = new BinaryExpression($1, $3, BinaryExpression::And);}
+		   | expression OR expression {$$ = new BinaryExpression($1, $3, BinaryExpression::Or);}
 		   | NEGATION expression {$$ = new NegExpression($2);}
 		   | '(' expression ')' { $$ = $2; }
 %%

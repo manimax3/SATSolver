@@ -16,11 +16,37 @@ struct EvaluationContext {
     std::map<std::string, bool> predicates;
 };
 
+class Expression;
 class Statement {
 public:
-    virtual ~Statement() = default;
-    virtual void print(){};
-    virtual void exec(EvaluationContext &ec) {}
+    enum Type { Print, Set, Expr };
+    Statement()
+        : type(Expr)
+    {
+    }
+
+    Statement(Expression *other)
+        : type(Print)
+        , other(other)
+    {
+    }
+
+    Statement(const std::string &pred, Expression *other)
+        : type(Set)
+        , pred(pred)
+        , other(other)
+    {
+    }
+
+    virtual ~Statement();
+
+    virtual void print();
+    virtual void exec(EvaluationContext &ec);
+
+protected:
+    Type        type;
+    std::string pred;
+    Expression *other = nullptr;
 };
 
 class Expression : public Statement {
@@ -31,48 +57,56 @@ public:
     virtual void print(){};
 };
 
-class SetStatement : public Statement {
+class BinaryExpression : public Expression {
 public:
-    SetStatement(const std::string &pred, bool value)
-        : pred(pred)
-        , value(value)
+    enum Type { And, Or, Impl, BiImpl };
+
+    BinaryExpression(Expression *lhs, Expression *rhs, Type op)
+        : lhs(lhs)
+        , rhs(rhs)
+        , op(op)
     {
     }
 
-    SetStatement(const std::string &pred, Expression *expr)
-        : pred(pred)
-        , value(expr)
+    int eval(EvaluationContext &ec) override
     {
-    }
-
-    ~SetStatement()
-    {
-        if (value.index() == 1) {
-            delete std::get<Expression *>(value);
-        }
+        switch (op) {
+        case Type::And:
+            return lhs->eval(ec) && rhs->eval(ec);
+        case Type::Or:
+            return lhs->eval(ec) || rhs->eval(ec);
+        case Type::Impl:
+            return !lhs->eval(ec) || rhs->eval(ec);
+        case Type::BiImpl:
+            return lhs->eval(ec) == rhs->eval(ec);
+        };
     }
 
     void print() override
     {
-        if (value.index() == 0) {
-            printf("Setting %s to %s", pred.c_str(), std::get<bool>(value) ? "tt" : "ff");
-        } else {
-            printf("Setting %s to ", pred.c_str());
-            std::get<Expression *>(value)->print();
-        }
-    }
-    virtual void exec(EvaluationContext &ec) override
-    {
-        if (value.index() == 0) {
-            ec.predicates[pred] = std::get<bool>(value);
-        } else {
-            ec.predicates[pred] = std::get<Expression *>(value)->eval(ec);
-        }
+        printf("(");
+        lhs->print();
+        switch (op) {
+        case Type::And:
+            printf(" /\\ ");
+            break;
+        case Type::Or:
+            printf(" \\/ ");
+            break;
+        case Type::Impl:
+            printf(" -> ");
+            break;
+        case Type::BiImpl:
+            printf(" <-> ");
+            break;
+        };
+        rhs->print();
+        printf(")");
     }
 
 private:
-    std::string                      pred;
-    std::variant<bool, Expression *> value;
+    Type        op;
+    Expression *lhs, *rhs;
 };
 
 class PredExpression : public Expression {
@@ -102,135 +136,6 @@ private:
     bool value;
 };
 
-class ImplExpression : public Expression {
-public:
-    ImplExpression(Expression *lhs, Expression *rhs)
-        : lhs(lhs)
-        , rhs(rhs)
-    {
-    }
-
-    ~ImplExpression()
-    {
-        if (lhs)
-            delete lhs;
-        if (rhs)
-            delete rhs;
-    }
-
-    void print() override
-    {
-        printf("(");
-        lhs->print();
-        printf(" -> ");
-        rhs->print();
-        printf(")");
-    }
-
-    int eval(EvaluationContext &ec) override { return (!lhs->eval(ec)) || rhs->eval(ec); }
-
-private:
-    Expression *lhs = nullptr, *rhs = nullptr;
-};
-
-class BiImplExpression : public Expression {
-public:
-    BiImplExpression(Expression *lhs, Expression *rhs)
-        : lhs(lhs)
-        , rhs(rhs)
-    {
-    }
-
-    ~BiImplExpression()
-    {
-        if (lhs)
-            delete lhs;
-        if (rhs)
-            delete rhs;
-    }
-
-    void print() override
-    {
-        printf("(");
-        lhs->print();
-        printf(" <-> ");
-        rhs->print();
-        printf(")");
-    }
-
-    int eval(EvaluationContext &ec) override
-    {
-        const auto a = lhs->eval(ec);
-        const auto b = rhs->eval(ec);
-
-        return a == b;
-    }
-
-private:
-    Expression *lhs = nullptr, *rhs = nullptr;
-};
-
-class AndExpression : public Expression {
-public:
-    AndExpression(Expression *lhs, Expression *rhs)
-        : lhs(lhs)
-        , rhs(rhs)
-    {
-    }
-
-    ~AndExpression()
-    {
-        if (lhs)
-            delete lhs;
-        if (rhs)
-            delete rhs;
-    }
-
-    void print() override
-    {
-        printf("(");
-        lhs->print();
-        printf(" and ");
-        rhs->print();
-        printf(")");
-    }
-
-    int eval(EvaluationContext &ec) override { return lhs->eval(ec) && rhs->eval(ec); }
-
-private:
-    Expression *lhs = nullptr, *rhs = nullptr;
-};
-
-class OrExpression : public Expression {
-public:
-    OrExpression(Expression *lhs, Expression *rhs)
-        : lhs(lhs)
-        , rhs(rhs)
-    {
-    }
-
-    ~OrExpression()
-    {
-        if (lhs)
-            delete lhs;
-        if (rhs)
-            delete rhs;
-    }
-    void print() override
-    {
-        printf("(");
-        lhs->print();
-        printf(" or ");
-        rhs->print();
-        printf(")");
-    }
-
-    int eval(EvaluationContext &ec) override { return lhs->eval(ec) || rhs->eval(ec); }
-
-private:
-    Expression *lhs = nullptr, *rhs = nullptr;
-};
-
 class NegExpression : public Expression {
 public:
     NegExpression(Expression *other)
@@ -256,35 +161,6 @@ private:
     Expression *other = nullptr;
 };
 
-class PrintStatement : public Statement {
-public:
-    PrintStatement(Expression *expr)
-        : expr(expr)
-    {
-    }
-
-    void print() override
-    {
-        printf("Printing the result of: ");
-        expr->print();
-    }
-
-    void exec(EvaluationContext &ec) override
-    {
-        expr->print();
-        printf(" ==> %s\n", expr->eval(ec) ? "tt" : "ff");
-    }
-
-    ~PrintStatement()
-    {
-        if (expr)
-            delete expr;
-    }
-
-private:
-    Expression *expr = nullptr;
-};
-
 class StatementList {
 public:
     StatementList() = default;
@@ -298,11 +174,11 @@ public:
         statements.push_back(stmt);
     }
 
-	StatementList(const StatementList &) = delete;
-	StatementList& operator=(const StatementList&) = delete;
+    StatementList(const StatementList &) = delete;
+    StatementList &operator=(const StatementList &) = delete;
 
-	StatementList(StatementList &&) = default;
-	StatementList& operator=(StatementList&&) = default;
+    StatementList(StatementList &&) = default;
+    StatementList &operator=(StatementList &&) = default;
 
     void add(Statement *stmt) { statements.push_back(stmt); }
 
