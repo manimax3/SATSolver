@@ -28,7 +28,7 @@ void Statement::exec(EvaluationContext &ec)
     switch (type) {
     case Type::Print:
         other->print();
-        printf(" ==> %s\n", other->eval(ec) ? "tt" : "ff");
+        printf(" ⇒ %s\n", other->eval(ec) ? "tt" : "ff");
         break;
     case Type::Set:
         ec.predicates[pred] = other->eval(ec);

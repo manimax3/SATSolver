@@ -88,16 +88,16 @@ public:
         lhs->print();
         switch (op) {
         case Type::And:
-            printf(" /\\ ");
+            printf(" ∧ ");
             break;
         case Type::Or:
-            printf(" \\/ ");
+            printf(" ∨ ");
             break;
         case Type::Impl:
-            printf(" -> ");
+            printf(" → ");
             break;
         case Type::BiImpl:
-            printf(" <-> ");
+            printf(" ↔ ");
             break;
         };
         rhs->print();
