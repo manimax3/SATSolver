@@ -1,26 +1,27 @@
 %{
-int yylex();
 #include <cstdio>
 #include <cstdlib>
-void yyerror(char *s);
+#include "ast.h"
+extern StatementList finalstmtlist;
 %}
+
+%require "3.2"
+%language "c++"
+%define api.value.type variant
+%define api.token.constructor
 
 %code requires {
 #include <string>
 #include "ast.h"
 }
 
-%union { 
-	StatementList *stmtlist;
-	Statement *stmt;
-	Expression *expression;
-	std::string* pred;
-	bool value;
+%code provides {
+yy::parser::symbol_type yylex();
 }
 
 %token IMPLICATION
 %token BIIMPLICATION
-%token <pred> PREDICATE
+%token <std::string> PREDICATE
 %token AND 
 %token OR
 %token NEGATION
@@ -36,39 +37,35 @@ void yyerror(char *s);
 %token SET
 %token PRINT
 
-%type <expression> expression
-%type <stmt> setstmt printstmt stmt
-%type <stmtlist> stmtlist
+%token EndOfFile 0
 
-%destructor {
-	delete $$;
-} <pred> <stmt> <expression>
+%type <Expression*> expression
+%type <Statement*> setstmt printstmt stmt
+%type <StatementList> stmtlist file
 
-%destructor {
-	$$->run();
-	delete $$;
-} <stmtlist>
-
-%start stmtlist
+%start file
 
 %%
-stmtlist : stmt { $$ = new StatementList($1); }
-	 | stmtlist stmt { $$ = new StatementList(*$1, $2); delete $1; }
+
+file : stmtlist { finalstmtlist = std::move($1); $$ = std::move($1); }
+
+stmtlist : stmt { $$ = StatementList($1); }
+	 | stmtlist stmt { $$ = std::move($1); $$.add($2); }
 
 stmt : setstmt ';'
 	 | printstmt ';'
 	 | expression ';' { $$ = static_cast<Statement*>($1);}
 
-setstmt : SET ':' PREDICATE TRUE { $$ = new SetStatement(*$3, true); delete $3; }
-		| SET ':' PREDICATE FALSE { $$ = new SetStatement(*$3, false); delete $3; }
-		| SET PREDICATE TRUE { $$ = new SetStatement(*$2, true); delete $2; }
-		| SET PREDICATE FALSE { $$ = new SetStatement(*$2, false); delete $2; }
-		| SET PREDICATE ':' expression { $$ = new SetStatement(*$2, $4); delete $2;}
+setstmt : SET ':' PREDICATE TRUE { $$ = new SetStatement($3, true); }
+		| SET ':' PREDICATE FALSE { $$ = new SetStatement($3, false); }
+		| SET PREDICATE TRUE { $$ = new SetStatement($2, true); }
+		| SET PREDICATE FALSE { $$ = new SetStatement($2, false); }
+		| SET PREDICATE ':' expression { $$ = new SetStatement($2, $4); }
 
 printstmt : PRINT ':' expression { $$ = new PrintStatement($3); }
 		  | PRINT expression { $$ = new PrintStatement($2); }
 
-expression : PREDICATE {$$ = new PredExpression(*$1); delete $1;}
+expression : PREDICATE {$$ = new PredExpression($1); }
 		   | TRUE { $$ = new ConstantExpression(true); }
 		   | FALSE { $$ = new ConstantExpression(false); }
 		   | expression IMPLICATION expression {$$ = new ImplExpression($1, $3);}
@@ -82,4 +79,10 @@ expression : PREDICATE {$$ = new PredExpression(*$1); delete $1;}
 void yyerror(char *s) {
 printf("Error: %s\n", s);
 }
+
+void yy::parser::error(const std::string& error)
+{
+	std::cerr << error << '\n';
+}
+
 

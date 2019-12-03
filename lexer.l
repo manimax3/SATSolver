@@ -1,23 +1,25 @@
 %{
 #include "parser.hpp"
 #include <string>
-int yylex();
+#define YY_DECL \
+	yy::parser::symbol_type yylex()
+YY_DECL;
 %}
 
 %%
-"->" {return IMPLICATION;}
-"<->" {return BIIMPLICATION;}
-"and" {return AND;}
-"or" {return OR;}
-"¬"|"not" {return NEGATION;}
+"->" {return yy::parser::make_IMPLICATION();}
+"<->" {return yy::parser::make_BIIMPLICATION();}
+"and" {return yy::parser::make_AND();}
+"or" {return yy::parser::make_OR();}
+"¬"|"not" {return yy::parser::make_NEGATION();}
 
-"true"|"tt" { return TRUE; }
-"false"|"ff" { return FALSE; }
+"true"|"tt" { return yy::parser::make_TRUE(); }
+"false"|"ff" { return yy::parser::make_FALSE(); }
 
-"SET"|"set" { return SET; }
-"PRINT"|"print" {return PRINT; }
+"SET"|"set" { return yy::parser::make_SET(); }
+"PRINT"|"print" {return yy::parser::make_PRINT(); }
 
-[a-zA-Z]([a-zA-Z0-9])* {yylval.pred = new std::string(yytext); return PREDICATE;}
+[a-zA-Z]([a-zA-Z0-9])* { return yy::parser::make_PREDICATE(std::string(yytext));}
 [ \t\n] {;}
 . { return *yytext;}
 %%

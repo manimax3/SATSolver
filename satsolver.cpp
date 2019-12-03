@@ -1,7 +1,9 @@
+#include "ast.h"
 #include "parser.hpp"
 #include <cstdio>
 
-extern FILE* yyin;
+extern FILE * yyin;
+StatementList finalstmtlist;
 
 int main(int argc, char **argv)
 {
@@ -9,7 +11,9 @@ int main(int argc, char **argv)
         yyin = fopen(argv[1], "r");
     }
 
-    yyparse();
+    yy::parser parser;
+    parser.parse();
+    finalstmtlist.run();
 
     if (argc == 2) {
         fclose(yyin);

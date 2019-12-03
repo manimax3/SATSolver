@@ -287,6 +287,8 @@ private:
 
 class StatementList {
 public:
+    StatementList() = default;
+
     StatementList(Statement *stmt) { statements.push_back(stmt); }
 
     StatementList(StatementList &other, Statement *stmt)
@@ -295,6 +297,12 @@ public:
         other.statements.clear();
         statements.push_back(stmt);
     }
+
+	StatementList(const StatementList &) = delete;
+	StatementList& operator=(const StatementList&) = delete;
+
+	StatementList(StatementList &&) = default;
+	StatementList& operator=(StatementList&&) = default;
 
     void add(Statement *stmt) { statements.push_back(stmt); }
 
