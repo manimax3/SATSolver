@@ -1,5 +1,7 @@
 #include "ast.h"
 
+#include <algorithm>
+
 template<typename T>
 auto cartesian(const std::list<std::list<T>> &input)
 {
@@ -66,7 +68,10 @@ void Statement::exec(EvaluationContext &ec)
         // 1. Get the atoms
         // 2. for all the combinations print the row
         // Assuming only up to depth 2
-        const auto                       atoms    = other->atoms();
+        auto atoms = other->atoms();
+        atoms.sort();
+        atoms.erase(std::unique(begin(atoms), end(atoms)), end(atoms));
+
         const auto                       rows     = 2 ^ atoms.size();
         const std::list<bool>            elements = { false, true };
         const std::list<std::list<bool>> cpin(atoms.size(), elements);
