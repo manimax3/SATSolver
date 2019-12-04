@@ -20,7 +20,7 @@ struct EvaluationContext {
 class Expression;
 class Statement {
 public:
-    enum Type { Print, Set, Expr, PrintAtoms };
+    enum Type { Print, Set, Expr, PrintAtoms, PrintTable };
     Statement()
         : type(Expr)
     {
@@ -41,7 +41,7 @@ public:
 
     virtual ~Statement();
 
-    virtual void print();
+    virtual int  print();
     virtual void exec(EvaluationContext &ec);
 
 protected:
@@ -53,11 +53,12 @@ protected:
 class Expression : public Statement {
 public:
     virtual ~Expression() = default;
-    void         exec(EvaluationContext &ec) {}
-    virtual int  eval(EvaluationContext &ec) = 0;
-    virtual void print(){};
+    void        exec(EvaluationContext &ec) {}
+    virtual int eval(EvaluationContext &ec) = 0;
+    virtual int print() { return 0; };
 
-    virtual std::list<std::string> atoms() const { return {}; };
+    virtual std::list<std::string>  atoms() const { return {}; };
+    virtual std::list<Expression *> childs() const { return {}; };
 };
 
 class BinaryExpression : public Expression {
@@ -85,10 +86,10 @@ public:
         };
     }
 
-    void print() override
+    int print() override
     {
         printf("(");
-        lhs->print();
+        const int lc = lhs->print();
         switch (op) {
         case Type::And:
             printf(" ∧ ");
@@ -103,8 +104,9 @@ public:
             printf(" ↔ ");
             break;
         };
-        rhs->print();
+        const int rc = rhs->print();
         printf(")");
+        return 2 + 3 + lc + rc;
     }
 
     virtual std::list<std::string> atoms() const override
@@ -114,6 +116,8 @@ public:
         ats.insert(end(ats), begin(rhsats), end(rhsats));
         return ats;
     }
+
+    virtual std::list<Expression *> childs() const override { return { lhs, rhs }; }
 
 private:
     Type        op;
@@ -126,8 +130,12 @@ public:
         : name(name)
     {
     }
-    void print() override { printf("%s", name.c_str()); }
-    int  eval(EvaluationContext &ec) override { return ec.predicates[name]; }
+    int print() override
+    {
+        printf("%s", name.c_str());
+        return name.length();
+    }
+    int eval(EvaluationContext &ec) override { return ec.predicates[name]; }
 
     std::list<std::string> atoms() const override { return { name }; }
 
@@ -142,8 +150,12 @@ public:
     {
     }
 
-    void print() override { printf("%s", value ? "tt" : "ff"); }
-    int  eval(EvaluationContext &) override { return value; }
+    int print() override
+    {
+        printf("%s", value ? "tt" : "ff");
+        return 2;
+    }
+    int eval(EvaluationContext &) override { return value; }
 
     std::list<std::string> atoms() const override { return {}; }
 
@@ -163,16 +175,21 @@ public:
         if (other)
             delete other;
     }
-    void print() override
+
+    int print() override
     {
         printf("(¬");
-        other->print();
+        const int c = other->print();
         printf(")");
+
+        return 3 + c;
     }
 
     int eval(EvaluationContext &ec) override { return !other->eval(ec); }
 
     std::list<std::string> atoms() const override { return { other->atoms() }; }
+
+    std::list<Expression *> childs() const override { return { other }; }
 
 private:
     Expression *other = nullptr;

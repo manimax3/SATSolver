@@ -17,8 +17,9 @@ YY_DECL;
 "false"|"ff" { return yy::parser::make_FALSE(); }
 
 "SET"|"set" { return yy::parser::make_SET(); }
-"PRINT"|"print" {return yy::parser::make_PRINT(); }
+(?i:print) {return yy::parser::make_PRINT(); }
 "ATOMS"|"atoms" { return yy::parser::make_ATOMS(); }
+"TABLE"|"table" { return yy::parser::make_TABLE(); }
 
 [a-zA-Z]([a-zA-Z0-9])* { return yy::parser::make_PREDICATE(std::string(yytext));}
 [ \t\n] {;}
