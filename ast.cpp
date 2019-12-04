@@ -18,7 +18,12 @@ void Statement::print()
         printf("Set %s to ", pred.c_str());
         other->print();
         break;
+    case Type::PrintAtoms:
+        printf("Printing atoms of ");
+        other->print();
+        break;
     default:
+        printf("Unknown statement type");
         break;
     }
 }
@@ -33,6 +38,17 @@ void Statement::exec(EvaluationContext &ec)
     case Type::Set:
         ec.predicates[pred] = other->eval(ec);
         break;
+    case Type::PrintAtoms: {
+        const auto atoms = other->atoms();
+        printf("Atoms in ");
+        other->print();
+        printf(" : ");
+        for (auto &&a : atoms) {
+            printf("%s, ", a.c_str());
+        }
+        printf("\n");
+        break;
+    }
     default:
         break;
     }

@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdio>
+#include <list>
 #include <map>
 #include <string>
 #include <variant>
@@ -19,14 +20,14 @@ struct EvaluationContext {
 class Expression;
 class Statement {
 public:
-    enum Type { Print, Set, Expr };
+    enum Type { Print, Set, Expr, PrintAtoms };
     Statement()
         : type(Expr)
     {
     }
 
-    Statement(Expression *other)
-        : type(Print)
+    Statement(Expression *other, Type type = Type::Print)
+        : type(type)
         , other(other)
     {
     }
@@ -55,6 +56,8 @@ public:
     void         exec(EvaluationContext &ec) {}
     virtual int  eval(EvaluationContext &ec) = 0;
     virtual void print(){};
+
+    virtual std::list<std::string> atoms() const { return {}; };
 };
 
 class BinaryExpression : public Expression {
@@ -104,6 +107,14 @@ public:
         printf(")");
     }
 
+    virtual std::list<std::string> atoms() const override
+    {
+        auto       ats    = lhs->atoms();
+        const auto rhsats = rhs->atoms();
+        ats.insert(end(ats), begin(rhsats), end(rhsats));
+        return ats;
+    }
+
 private:
     Type        op;
     Expression *lhs, *rhs;
@@ -118,6 +129,8 @@ public:
     void print() override { printf("%s", name.c_str()); }
     int  eval(EvaluationContext &ec) override { return ec.predicates[name]; }
 
+    std::list<std::string> atoms() const override { return { name }; }
+
 private:
     std::string name;
 };
@@ -131,6 +144,8 @@ public:
 
     void print() override { printf("%s", value ? "tt" : "ff"); }
     int  eval(EvaluationContext &) override { return value; }
+
+    std::list<std::string> atoms() const override { return {}; }
 
 private:
     bool value;
@@ -156,6 +171,8 @@ public:
     }
 
     int eval(EvaluationContext &ec) override { return !other->eval(ec); }
+
+    std::list<std::string> atoms() const override { return { other->atoms() }; }
 
 private:
     Expression *other = nullptr;

@@ -36,6 +36,7 @@ yy::parser::symbol_type yylex();
 %token FALSE
 %token SET
 %token PRINT
+%token ATOMS
 
 %token EndOfFile 0
 
@@ -64,6 +65,7 @@ setstmt : SET ':' PREDICATE TRUE { $$ = new Statement($3, new ConstantExpression
 
 printstmt : PRINT ':' expression { $$ = new Statement($3); }
 		  | PRINT expression { $$ = new Statement($2); }
+		  | PRINT ATOMS expression { $$ = new Statement($3, Statement::PrintAtoms); }
 
 expression : PREDICATE {$$ = new PredExpression($1); }
 		   | TRUE { $$ = new ConstantExpression(true); }

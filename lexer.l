@@ -18,6 +18,7 @@ YY_DECL;
 
 "SET"|"set" { return yy::parser::make_SET(); }
 "PRINT"|"print" {return yy::parser::make_PRINT(); }
+"ATOMS"|"atoms" { return yy::parser::make_ATOMS(); }
 
 [a-zA-Z]([a-zA-Z0-9])* { return yy::parser::make_PREDICATE(std::string(yytext));}
 [ \t\n] {;}
