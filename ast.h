@@ -52,6 +52,10 @@ protected:
 
 class Expression : public Statement {
 public:
+    Expression(Expression *parent = nullptr)
+        : parent(parent)
+    {
+    }
     virtual ~Expression() = default;
     void        exec(EvaluationContext &ec) {}
     virtual int eval(EvaluationContext &ec) = 0;
@@ -59,17 +63,22 @@ public:
 
     virtual std::list<std::string>  atoms() const { return {}; };
     virtual std::list<Expression *> childs() const { return {}; };
+
+    Expression *parent;
 };
 
 class BinaryExpression : public Expression {
 public:
     enum Type { And, Or, Impl, BiImpl };
 
-    BinaryExpression(Expression *lhs, Expression *rhs, Type op)
-        : lhs(lhs)
+    BinaryExpression(Expression *lhs, Expression *rhs, Type op, Expression *parent = nullptr)
+        : Expression(parent)
+        , lhs(lhs)
         , rhs(rhs)
         , op(op)
     {
+        lhs->parent = this;
+        rhs->parent = this;
     }
 
     int eval(EvaluationContext &ec) override
@@ -126,8 +135,9 @@ private:
 
 class PredExpression : public Expression {
 public:
-    PredExpression(const std::string &name)
-        : name(name)
+    PredExpression(const std::string &name, Expression *parent = nullptr)
+        : Expression(parent)
+        , name(name)
     {
     }
     int print() override
@@ -145,8 +155,9 @@ private:
 
 class ConstantExpression : public Expression {
 public:
-    ConstantExpression(bool value)
-        : value(value)
+    ConstantExpression(bool value, Expression *parent = nullptr)
+        : Expression(parent)
+        , value(value)
     {
     }
 
@@ -165,9 +176,11 @@ private:
 
 class NegExpression : public Expression {
 public:
-    NegExpression(Expression *other)
-        : other(other)
+    NegExpression(Expression *other, Expression *parent = nullptr)
+        : Expression(parent)
+        , other(other)
     {
+		other->parent = this;
     }
 
     ~NegExpression()
