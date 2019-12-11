@@ -41,7 +41,7 @@ yy::parser::symbol_type yylex();
 
 %token EndOfFile 0
 
-%type <Expression*> expression
+%type <std::shared_ptr<Expression>> expression
 %type <Statement*> setstmt printstmt stmt
 %type <StatementList> stmtlist file
 
@@ -56,12 +56,12 @@ stmtlist : stmt { $$ = StatementList($1); }
 
 stmt : setstmt ';'
 	 | printstmt ';'
-	 | expression ';' { $$ = static_cast<Statement*>($1);}
+	 /* | expression ';' { $$ = static_cast<Statement*>($1);} */
 
-setstmt : SET ':' PREDICATE TRUE { $$ = new Statement($3, new ConstantExpression(true)); }
-		| SET ':' PREDICATE FALSE { $$ = new Statement($3, new ConstantExpression(false)); }
-		| SET PREDICATE TRUE { $$ = new Statement($2, new ConstantExpression(false)); }
-		| SET PREDICATE FALSE { $$ = new Statement($2, new ConstantExpression(false)); }
+setstmt : SET ':' PREDICATE TRUE { $$ = new Statement($3, std::make_shared<ConstantExpression>(true)); }
+		| SET ':' PREDICATE FALSE { $$ = new Statement($3, std::make_shared<ConstantExpression>(false)); }
+		| SET PREDICATE TRUE { $$ = new Statement($2, std::make_shared<ConstantExpression>(false)); }
+		| SET PREDICATE FALSE { $$ = new Statement($2, std::make_shared<ConstantExpression>(false)); }
 		| SET PREDICATE ':' expression { $$ = new Statement($2, $4); }
 
 printstmt : PRINT ':' expression { $$ = new Statement($3); }
@@ -69,14 +69,14 @@ printstmt : PRINT ':' expression { $$ = new Statement($3); }
 		  | PRINT ATOMS expression { $$ = new Statement($3, Statement::PrintAtoms); }
 		  | PRINT TABLE expression { $$ = new Statement($3, Statement::PrintTable); }
 
-expression : PREDICATE {$$ = new PredExpression($1); }
-		   | TRUE { $$ = new ConstantExpression(true); }
-		   | FALSE { $$ = new ConstantExpression(false); }
-		   | expression IMPLICATION expression {$$ = new BinaryExpression($1, $3, BinaryExpression::Impl);}
-		   | expression BIIMPLICATION expression {$$ = new BinaryExpression($1, $3, BinaryExpression::BiImpl);}
-		   | expression AND expression {$$ = new BinaryExpression($1, $3, BinaryExpression::And);}
-		   | expression OR expression {$$ = new BinaryExpression($1, $3, BinaryExpression::Or);}
-		   | NEGATION expression {$$ = new NegExpression($2);}
+expression : PREDICATE {$$ = std::make_shared<PredExpression>($1); }
+		   | TRUE { $$ = std::make_shared<ConstantExpression>(true); }
+		   | FALSE { $$ = std::make_shared<ConstantExpression>(false); }
+		   | expression IMPLICATION expression {$$ = std::make_shared<BinaryExpression>($1, $3, BinaryExpression::Impl);}
+		   | expression BIIMPLICATION expression {$$ = std::make_shared<BinaryExpression>($1, $3, BinaryExpression::BiImpl);}
+		   | expression AND expression {$$ = std::make_shared<BinaryExpression>($1, $3, BinaryExpression::And);}
+		   | expression OR expression {$$ = std::make_shared<BinaryExpression>($1, $3, BinaryExpression::Or);}
+		   | NEGATION expression {$$ = std::make_shared<NegExpression>($2);}
 		   | '(' expression ')' { $$ = $2; }
 %%
 

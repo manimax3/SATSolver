@@ -21,12 +21,7 @@ auto cartesian(const std::list<std::list<T>> &input)
     return output;
 }
 
-Statement::~Statement()
-{
-    if (other && type != Expr) {
-        delete other;
-    }
-}
+Statement::~Statement() {}
 
 int Statement::print()
 {
