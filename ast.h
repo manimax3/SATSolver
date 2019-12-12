@@ -155,7 +155,6 @@ public:
 
     virtual std::list<Expression *> childs() const override { return { lhs.get(), rhs.get() }; }
 
-private:
     Type           op;
     ExpressionUPtr lhs, rhs;
 };
@@ -225,7 +224,6 @@ public:
 
     std::list<Expression *> childs() const override { return { other.get() }; }
 
-private:
     ExpressionUPtr other;
 };
 
@@ -323,4 +321,30 @@ public:
 
 private:
     Func func;
+};
+
+template<typename T>
+bool is_expression(Expression *expr)
+{
+    return dynamic_cast<T *>(expr) != nullptr;
+}
+
+class NegationsNormalformConverter : public Visitor {
+public:
+    NegationsNormalformConverter(Expression *expr)
+        : toplevel(expr)
+    {
+    }
+
+    void operator()(BinaryExpression *e) {}
+    void operator()(NegExpression *e)
+    {
+        if (is_expression<NegExpression>(e->childs().front()))
+            return;
+    }
+    void operator()(ConstantExpression *e) {}
+    void operator()(PredExpression *e) {}
+
+private:
+    Expression *toplevel;
 };
