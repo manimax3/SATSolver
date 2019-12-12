@@ -151,6 +151,12 @@ void Statement::exec(EvaluationContext &ec)
         printf(" ⇒ %s\n", other->eval(ec) ? "tt" : "ff");
         break;
     }
+    case Type::PrintKNF: {
+        make_knf(other);
+        other->print();
+        printf(" ⇒ %s\n", other->eval(ec) ? "tt" : "ff");
+        break;
+    }
     default:
         break;
     }

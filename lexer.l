@@ -21,6 +21,7 @@ YY_DECL;
 (?i:atoms) { return yy::parser::make_ATOMS(); }
 (?i:table) { return yy::parser::make_TABLE(); }
 (?i:nnf) { return yy::parser::make_NNF(); }
+(?i:knf) { return yy::parser::make_KNF(); }
 
 [a-zA-Z]([a-zA-Z0-9])* { return yy::parser::make_PREDICATE(std::string(yytext));}
 [ \t\n] { ; }
