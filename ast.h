@@ -73,6 +73,32 @@ public:
     virtual bool operator()(std::shared_ptr<class PredExpression> exp) { return true; }
 };
 
+template<typename BE, typename NE, typename CE, typename PE>
+struct OverloadedVisitor : Visitor {
+    template<typename BEs, typename NEs, typename CEs, typename PEs>
+    OverloadedVisitor(BEs &&bes, NEs &&nes, CEs &&ces, PEs &&pes)
+        : be(std::forward<BEs>(bes))
+        , ne(std::forward<NEs>(nes))
+        , ce(std::forward<CEs>(ces))
+        , pe(std::forward<PEs>(pes))
+    {
+    }
+
+    bool operator()(std::shared_ptr<class BinaryExpression> exp) override { return be(std::move(exp)); }
+    bool operator()(std::shared_ptr<class NegExpression> exp) override { return ne(std::move(exp)); }
+    bool operator()(std::shared_ptr<class ConstantExpression> exp) override { return ce(std::move(exp)); }
+    bool operator()(std::shared_ptr<class PredExpression> exp) override { return pe(std::move(exp)); }
+
+private:
+    BE be;
+    NE ne;
+    CE ce;
+    PE pe;
+};
+
+template<class... Ts>
+OverloadedVisitor(Ts...)->OverloadedVisitor<Ts...>;
+
 template<typename CRTP>
 class CRTPExpression : public Expression {
 public:
