@@ -306,3 +306,21 @@ public:
         }
     }
 };
+
+template<typename Func>
+class FunctionVisitor : public Visitor {
+public:
+    template<typename T>
+    explicit FunctionVisitor(T &&in)
+        : func(std::forward<T>(in))
+    {
+    }
+
+    void operator()(BinaryExpression *e) { func(e); }
+    void operator()(NegExpression *e) { func(e); }
+    void operator()(ConstantExpression *e) { func(e); }
+    void operator()(PredExpression *e) { func(e); }
+
+private:
+    Func func;
+};
