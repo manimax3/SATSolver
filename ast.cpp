@@ -38,7 +38,7 @@ Statement::Statement(const std::string &pred, std::shared_ptr<Expression> other)
     , pred(pred)
     , other(std::move(other))
 {
-	this->other->update_parents();
+    this->other->update_parents();
 }
 
 Statement::~Statement() {}

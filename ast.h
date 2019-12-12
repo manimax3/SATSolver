@@ -60,15 +60,45 @@ public:
         }
     }
 
+    virtual void visit(class Visitor &v) = 0;
+
     std::weak_ptr<Expression> parent;
 };
 
-class BinaryExpression : public Expression {
+class Visitor {
+public:
+    virtual bool operator()(std::shared_ptr<class BinaryExpression> exp) { return true; }
+    virtual bool operator()(std::shared_ptr<class NegExpression> exp) { return true; }
+    virtual bool operator()(std::shared_ptr<class ConstantExpression> exp) { return true; }
+    virtual bool operator()(std::shared_ptr<class PredExpression> exp) { return true; }
+};
+
+template<typename CRTP>
+class CRTPExpression : public Expression {
+public:
+    template<typename... Args>
+    CRTPExpression(Args &&... args)
+        : Expression(std::forward<Args>(args)...)
+    {
+    }
+
+    void visit(Visitor &v)
+    {
+        const auto recurse = v(std::static_pointer_cast<CRTP>(shared_from_this()));
+        if (recurse) {
+            for (auto &&c : childs()) {
+                c->visit(v);
+            }
+        }
+    }
+};
+
+class BinaryExpression : public CRTPExpression<BinaryExpression> {
 public:
     enum Type { And, Or, Impl, BiImpl };
 
     BinaryExpression(std::shared_ptr<Expression> lhs, std::shared_ptr<Expression> rhs, Type op, std::weak_ptr<Expression> parent = {})
-        : Expression(std::move(parent))
+        : CRTPExpression(std::move(parent))
         , lhs(std::move(lhs))
         , rhs(std::move(rhs))
         , op(op)
@@ -127,10 +157,10 @@ private:
     std::shared_ptr<Expression> lhs, rhs;
 };
 
-class PredExpression : public Expression {
+class PredExpression : public CRTPExpression<PredExpression> {
 public:
     PredExpression(const std::string &name, std::weak_ptr<Expression> parent = {})
-        : Expression(std::move(parent))
+        : CRTPExpression(std::move(parent))
         , name(name)
     {
     }
@@ -147,10 +177,10 @@ private:
     std::string name;
 };
 
-class ConstantExpression : public Expression {
+class ConstantExpression : public CRTPExpression<ConstantExpression> {
 public:
     ConstantExpression(bool value, std::weak_ptr<Expression> parent = {})
-        : Expression(std::move(parent))
+        : CRTPExpression(std::move(parent))
         , value(value)
     {
     }
@@ -168,10 +198,10 @@ private:
     bool value;
 };
 
-class NegExpression : public Expression {
+class NegExpression : public CRTPExpression<NegExpression> {
 public:
     NegExpression(std::shared_ptr<Expression> other, std::weak_ptr<Expression> parent = {})
-        : Expression(std::move(parent))
+        : CRTPExpression(std::move(parent))
         , other(std::move(other))
     {
     }
@@ -236,4 +266,27 @@ public:
     }
 
     std::vector<Statement *> statements;
+};
+
+class SimplePrintWalker : public Visitor {
+    bool operator()(std::shared_ptr<BinaryExpression>) override
+    {
+        printf("Found binary expression!\n");
+        return true;
+    }
+    bool operator()(std::shared_ptr<NegExpression>) override
+    {
+        printf("Found neg expression!\n");
+        return true;
+    }
+    bool operator()(std::shared_ptr<ConstantExpression>) override
+    {
+        printf("Found constant expression!\n");
+        return true;
+    }
+    bool operator()(std::shared_ptr<PredExpression>) override
+    {
+        printf("Found pred expression!\n");
+        return true;
+    }
 };
