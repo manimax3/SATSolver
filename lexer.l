@@ -20,6 +20,7 @@ YY_DECL;
 (?i:print) {return yy::parser::make_PRINT(); }
 (?i:atoms) { return yy::parser::make_ATOMS(); }
 (?i:table) { return yy::parser::make_TABLE(); }
+(?i:nnf) { return yy::parser::make_NNF(); }
 
 [a-zA-Z]([a-zA-Z0-9])* { return yy::parser::make_PREDICATE(std::string(yytext));}
 [ \t\n] { ; }

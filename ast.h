@@ -21,7 +21,7 @@ struct EvaluationContext {
 class Expression;
 class Statement {
 public:
-    enum Type { Print, Set, Expr, PrintAtoms, PrintTable };
+    enum Type { Print, Set, Expr, PrintAtoms, PrintTable, PrintNNF };
 
     Statement();
     Statement(std::shared_ptr<Expression> other, Type type = Type::Print);

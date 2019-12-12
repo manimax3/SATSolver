@@ -38,6 +38,7 @@ yy::parser::symbol_type yylex();
 %token PRINT
 %token ATOMS
 %token TABLE
+%token NNF
 
 %token EndOfFile 0
 
@@ -68,6 +69,7 @@ printstmt : PRINT ':' expression { $$ = new Statement($3); }
 		  | PRINT expression { $$ = new Statement($2); }
 		  | PRINT ATOMS expression { $$ = new Statement($3, Statement::PrintAtoms); }
 		  | PRINT TABLE expression { $$ = new Statement($3, Statement::PrintTable); }
+		  | PRINT NNF expression { $$ = new Statement($3, Statement::PrintNNF); }
 
 expression : PREDICATE {$$ = std::make_shared<PredExpression>($1); }
 		   | TRUE { $$ = std::make_shared<ConstantExpression>(true); }

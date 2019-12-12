@@ -145,6 +145,12 @@ void Statement::exec(EvaluationContext &ec)
 
         break;
     }
+    case Type::PrintNNF: {
+        make_nnf(other);
+        other->print();
+        printf(" ⇒ %s\n", other->eval(ec) ? "tt" : "ff");
+        break;
+    }
     default:
         break;
     }
