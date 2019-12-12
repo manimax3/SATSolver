@@ -21,6 +21,26 @@ auto cartesian(const std::list<std::list<T>> &input)
     return output;
 }
 
+Statement::Statement()
+    : type(Expr)
+{
+}
+
+Statement::Statement(std::shared_ptr<Expression> other, Type type)
+    : type(type)
+    , other(std::move(other))
+{
+    this->other->update_parents();
+}
+
+Statement::Statement(const std::string &pred, std::shared_ptr<Expression> other)
+    : type(Set)
+    , pred(pred)
+    , other(std::move(other))
+{
+	this->other->update_parents();
+}
+
 Statement::~Statement() {}
 
 int Statement::print()

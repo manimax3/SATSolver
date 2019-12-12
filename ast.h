@@ -22,23 +22,10 @@ class Expression;
 class Statement {
 public:
     enum Type { Print, Set, Expr, PrintAtoms, PrintTable };
-    Statement()
-        : type(Expr)
-    {
-    }
 
-    Statement(std::shared_ptr<Expression> other, Type type = Type::Print)
-        : type(type)
-        , other(std::move(other))
-    {
-    }
-
-    Statement(const std::string &pred, std::shared_ptr<Expression> other)
-        : type(Set)
-        , pred(pred)
-        , other(std::move(other))
-    {
-    }
+    Statement();
+    Statement(std::shared_ptr<Expression> other, Type type = Type::Print);
+    Statement(const std::string &pred, std::shared_ptr<Expression> other);
 
     virtual ~Statement();
 
@@ -65,6 +52,14 @@ public:
     virtual std::list<std::string>                 atoms() const { return {}; };
     virtual std::list<std::shared_ptr<Expression>> childs() const { return {}; };
 
+    void update_parents()
+    {
+        for (auto &&c : childs()) {
+            c->parent = shared_from_this(); // Luke, I am your father ;-;
+            c->update_parents();
+        }
+    }
+
     std::weak_ptr<Expression> parent;
 };
 
@@ -72,10 +67,10 @@ class BinaryExpression : public Expression {
 public:
     enum Type { And, Or, Impl, BiImpl };
 
-    BinaryExpression(std::shared_ptr<Expression> lhs, std::shared_ptr<Expression> rhs, Type op, Expression *parent = nullptr)
-        : Expression(parent ? parent->shared_from_this() : nullptr)
-        , lhs(lhs)
-        , rhs(rhs)
+    BinaryExpression(std::shared_ptr<Expression> lhs, std::shared_ptr<Expression> rhs, Type op, std::weak_ptr<Expression> parent = {})
+        : Expression(std::move(parent))
+        , lhs(std::move(lhs))
+        , rhs(std::move(rhs))
         , op(op)
     {
     }
@@ -134,8 +129,8 @@ private:
 
 class PredExpression : public Expression {
 public:
-    PredExpression(const std::string &name, Expression *parent = nullptr)
-        : Expression(parent ? parent->shared_from_this() : nullptr)
+    PredExpression(const std::string &name, std::weak_ptr<Expression> parent = {})
+        : Expression(std::move(parent))
         , name(name)
     {
     }
@@ -154,8 +149,8 @@ private:
 
 class ConstantExpression : public Expression {
 public:
-    ConstantExpression(bool value, Expression *parent = nullptr)
-        : Expression(parent ? parent->shared_from_this() : nullptr)
+    ConstantExpression(bool value, std::weak_ptr<Expression> parent = {})
+        : Expression(std::move(parent))
         , value(value)
     {
     }
@@ -175,8 +170,8 @@ private:
 
 class NegExpression : public Expression {
 public:
-    NegExpression(std::shared_ptr<Expression> other, Expression *parent = nullptr)
-        : Expression(parent ? parent->shared_from_this() : nullptr)
+    NegExpression(std::shared_ptr<Expression> other, std::weak_ptr<Expression> parent = {})
+        : Expression(std::move(parent))
         , other(std::move(other))
     {
     }
