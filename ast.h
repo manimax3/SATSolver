@@ -19,6 +19,15 @@ struct EvaluationContext {
 };
 
 class Expression;
+class Visitor {
+public:
+    virtual ~Visitor() = default;
+    virtual void operator()(Expression *){};
+    virtual void operator()(class BinaryExpression *){};
+    virtual void operator()(class NegExpression *){};
+    virtual void operator()(class ConstantExpression *){};
+    virtual void operator()(class PredExpression *){};
+};
 
 using ExpressionUPtr = std::unique_ptr<Expression>;
 
@@ -68,15 +77,29 @@ public:
     virtual std::list<std::string>  atoms() const { return {}; };
     virtual std::list<Expression *> childs() const { return {}; };
 
+    virtual void visit(Visitor &visitor) {}
+
     Expression *parent;
 };
 
-class BinaryExpression : public Expression {
+template<typename CRTP>
+class CRTPExpression : public Expression {
+public:
+    template<typename... Args>
+    CRTPExpression(Args &&... args)
+        : Expression(std::forward<Args>(args)...)
+    {
+    }
+
+    void visit(Visitor &visitor) override { visitor(static_cast<CRTP *>(this)); }
+};
+
+class BinaryExpression : public CRTPExpression<BinaryExpression> {
 public:
     enum Type { And, Or, Impl, BiImpl };
 
     BinaryExpression(ExpressionUPtr lhs, ExpressionUPtr rhs, Type op, Expression *parent = nullptr)
-        : Expression(parent)
+        : CRTPExpression(parent)
         , lhs(std::move(lhs))
         , rhs(std::move(rhs))
         , op(op)
@@ -137,10 +160,10 @@ private:
     ExpressionUPtr lhs, rhs;
 };
 
-class PredExpression : public Expression {
+class PredExpression : public CRTPExpression<PredExpression> {
 public:
     PredExpression(const std::string &name, Expression *parent = nullptr)
-        : Expression(parent)
+        : CRTPExpression(parent)
         , name(name)
     {
     }
@@ -157,10 +180,10 @@ private:
     std::string name;
 };
 
-class ConstantExpression : public Expression {
+class ConstantExpression : public CRTPExpression<ConstantExpression> {
 public:
     ConstantExpression(bool value, Expression *parent = nullptr)
-        : Expression(parent)
+        : CRTPExpression(parent)
         , value(value)
     {
     }
@@ -178,10 +201,10 @@ private:
     bool value;
 };
 
-class NegExpression : public Expression {
+class NegExpression : public CRTPExpression<NegExpression> {
 public:
     NegExpression(ExpressionUPtr other, Expression *parent = nullptr)
-        : Expression(parent)
+        : CRTPExpression(parent)
         , other(std::move(other))
     {
         this->other->parent = this;
@@ -247,4 +270,39 @@ public:
     }
 
     std::vector<Statement *> statements;
+};
+
+class SimplePrintingASTWalker : public Visitor {
+public:
+    void operator()(BinaryExpression *be) override
+    {
+        printf("Found binary expression!\n");
+        for (auto &&c : be->childs()) {
+            c->visit(*this);
+        }
+    }
+
+    void operator()(NegExpression *ne) override
+    {
+        printf("Found negexpr\n");
+        for (auto &&c : ne->childs()) {
+            c->visit(*this);
+        }
+    }
+
+    void operator()(ConstantExpression *ce) override
+    {
+        printf("Found const expr\n");
+        for (auto &&c : ce->childs()) {
+            c->visit(*this);
+        }
+    }
+
+    void operator()(PredExpression *pe) override
+    {
+        printf("Found predexpr\n");
+        for (auto &&c : pe->childs()) {
+            c->visit(*this);
+        }
+    }
 };
