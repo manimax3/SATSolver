@@ -19,6 +19,9 @@ struct EvaluationContext {
 };
 
 class Expression;
+
+using ExpressionUPtr = std::unique_ptr<Expression>;
+
 class Statement {
 public:
     enum Type { Print, Set, Expr, PrintAtoms, PrintTable };
@@ -27,13 +30,13 @@ public:
     {
     }
 
-    Statement(std::shared_ptr<Expression> other, Type type = Type::Print)
+    Statement(ExpressionUPtr other, Type type = Type::Print)
         : type(type)
         , other(std::move(other))
     {
     }
 
-    Statement(const std::string &pred, std::shared_ptr<Expression> other)
+    Statement(const std::string &pred, ExpressionUPtr other)
         : type(Set)
         , pred(pred)
         , other(std::move(other))
@@ -46,15 +49,15 @@ public:
     virtual void exec(EvaluationContext &ec);
 
 protected:
-    Type                        type;
-    std::string                 pred;
-    std::shared_ptr<Expression> other;
+    Type           type;
+    std::string    pred;
+    ExpressionUPtr other;
 };
 
-class Expression : public Statement, public std::enable_shared_from_this<Expression> {
+class Expression : public Statement {
 public:
-    Expression(std::weak_ptr<Expression> parent)
-        : parent(std::move(parent))
+    Expression(Expression *parent)
+        : parent(parent)
     {
     }
     virtual ~Expression() = default;
@@ -62,22 +65,24 @@ public:
     virtual int eval(EvaluationContext &ec) = 0;
     virtual int print() { return 0; };
 
-    virtual std::list<std::string>                 atoms() const { return {}; };
-    virtual std::list<std::shared_ptr<Expression>> childs() const { return {}; };
+    virtual std::list<std::string>  atoms() const { return {}; };
+    virtual std::list<Expression *> childs() const { return {}; };
 
-    std::weak_ptr<Expression> parent;
+    Expression *parent;
 };
 
 class BinaryExpression : public Expression {
 public:
     enum Type { And, Or, Impl, BiImpl };
 
-    BinaryExpression(std::shared_ptr<Expression> lhs, std::shared_ptr<Expression> rhs, Type op, Expression *parent = nullptr)
-        : Expression(parent ? parent->shared_from_this() : nullptr)
-        , lhs(lhs)
-        , rhs(rhs)
+    BinaryExpression(ExpressionUPtr lhs, ExpressionUPtr rhs, Type op, Expression *parent = nullptr)
+        : Expression(parent)
+        , lhs(std::move(lhs))
+        , rhs(std::move(rhs))
         , op(op)
     {
+        this->lhs->parent = this;
+        this->rhs->parent = this;
     }
 
     int eval(EvaluationContext &ec) override
@@ -125,17 +130,17 @@ public:
         return ats;
     }
 
-    virtual std::list<std::shared_ptr<Expression>> childs() const override { return { lhs, rhs }; }
+    virtual std::list<Expression *> childs() const override { return { lhs.get(), rhs.get() }; }
 
 private:
-    Type                        op;
-    std::shared_ptr<Expression> lhs, rhs;
+    Type           op;
+    ExpressionUPtr lhs, rhs;
 };
 
 class PredExpression : public Expression {
 public:
     PredExpression(const std::string &name, Expression *parent = nullptr)
-        : Expression(parent ? parent->shared_from_this() : nullptr)
+        : Expression(parent)
         , name(name)
     {
     }
@@ -155,7 +160,7 @@ private:
 class ConstantExpression : public Expression {
 public:
     ConstantExpression(bool value, Expression *parent = nullptr)
-        : Expression(parent ? parent->shared_from_this() : nullptr)
+        : Expression(parent)
         , value(value)
     {
     }
@@ -175,10 +180,11 @@ private:
 
 class NegExpression : public Expression {
 public:
-    NegExpression(std::shared_ptr<Expression> other, Expression *parent = nullptr)
-        : Expression(parent ? parent->shared_from_this() : nullptr)
+    NegExpression(ExpressionUPtr other, Expression *parent = nullptr)
+        : Expression(parent)
         , other(std::move(other))
     {
+        this->other->parent = this;
     }
 
     int print() override
@@ -194,10 +200,10 @@ public:
 
     std::list<std::string> atoms() const override { return { other->atoms() }; }
 
-    std::list<std::shared_ptr<Expression>> childs() const override { return { other }; }
+    std::list<Expression *> childs() const override { return { other.get() }; }
 
 private:
-    std::shared_ptr<Expression> other;
+    ExpressionUPtr other;
 };
 
 class StatementList {
