@@ -1,26 +1,12 @@
-set: p1 true;
-set: p2 false;
-set: p3 false;
-set: p4 true;
-set: p1 true;
-set: p2 false;
-set: p3 false;
-set: p4 true;
-set: p1 true;
-set: p2 false;
-set: p3 false;
-set: p4 true;
-set: p1 true;
-set: p2 false;
-set: p3 false;
-set: p4 true;
+print table a and b or not b;
 
-print: p1 or p2;
+set b: tt;
 
-print p1 and p2 or p3 and not p4;
-print p1 and p2 or p3 and not p4;
-print p1 and p2 or p3 and not p4;
-print p1 and p2 or p3 and not p4;
-print p1 and p2 or p3 and not p4;
-print p1 and p2 or p3 and not p4;
-print p1 and p2 or p3 and not p4;
+print nnf a and b or not b;
+print knf a and b or not b;
+
+print table a -> c or d;
+print knf a -> c or d;
+
+print nnf a <-> b <-> c;
+print knf a <-> b <-> c;
