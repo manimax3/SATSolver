@@ -60,6 +60,8 @@ public:
         }
     }
 
+    virtual std::shared_ptr<Expression> deepcopy() const = 0;
+
     virtual void visit(class Visitor &v) = 0;
 
     std::weak_ptr<Expression> parent;
@@ -178,7 +180,11 @@ public:
 
     virtual std::list<std::shared_ptr<Expression>> childs() const override { return { lhs, rhs }; }
 
-private:
+    virtual std::shared_ptr<Expression> deepcopy() const override
+    {
+        return std::make_shared<BinaryExpression>(lhs->deepcopy(), rhs->deepcopy(), op);
+    }
+
     Type                        op;
     std::shared_ptr<Expression> lhs, rhs;
 };
@@ -198,6 +204,8 @@ public:
     int eval(EvaluationContext &ec) override { return ec.predicates[name]; }
 
     std::list<std::string> atoms() const override { return { name }; }
+
+    virtual std::shared_ptr<Expression> deepcopy() const override { return std::make_shared<PredExpression>(name); }
 
 private:
     std::string name;
@@ -219,6 +227,8 @@ public:
     int eval(EvaluationContext &) override { return value; }
 
     std::list<std::string> atoms() const override { return {}; }
+
+    virtual std::shared_ptr<Expression> deepcopy() const override { return std::make_shared<ConstantExpression>(value); }
 
 private:
     bool value;
@@ -243,11 +253,10 @@ public:
 
     int eval(EvaluationContext &ec) override { return !other->eval(ec); }
 
-    std::list<std::string> atoms() const override { return { other->atoms() }; }
-
+    std::list<std::string>                 atoms() const override { return { other->atoms() }; }
     std::list<std::shared_ptr<Expression>> childs() const override { return { other }; }
+    virtual std::shared_ptr<Expression>    deepcopy() const override { return std::make_shared<NegExpression>(other->deepcopy()); }
 
-private:
     std::shared_ptr<Expression> other;
 };
 
@@ -316,3 +325,15 @@ class SimplePrintWalker : public Visitor {
         return true;
     }
 };
+
+namespace nnf {
+class Walker : public Visitor {
+public:
+    bool operator()(std::shared_ptr<BinaryExpression> e) override { return false; }
+    bool operator()(std::shared_ptr<NegExpression> e) override { return false; }
+    bool operator()(std::shared_ptr<PredExpression> e) override { return false; }
+    bool operator()(std::shared_ptr<ConstantExpression> e) override { return false; }
+};
+}
+
+void make_nnf(std::shared_ptr<Expression> &input);

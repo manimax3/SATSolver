@@ -149,3 +149,80 @@ void Statement::exec(EvaluationContext &ec)
         break;
     }
 }
+
+void make_nnf(std::shared_ptr<Expression> &input)
+{
+    OverloadedVisitor implremover{ [](std::shared_ptr<BinaryExpression> expr) {
+                                      if (expr->op == BinaryExpression::Impl) {
+                                          expr->op  = BinaryExpression::Or;
+                                          auto nota = std::make_shared<NegExpression>(expr->lhs, expr);
+                                          expr->lhs = std::move(nota);
+                                      } else if (expr->op == BinaryExpression::BiImpl) {
+                                          const auto a    = expr->lhs;
+                                          const auto b    = expr->rhs;
+                                          const auto nota = std::make_shared<NegExpression>(a, expr);
+
+                                          const auto a2   = a->deepcopy();
+                                          const auto b2   = b->deepcopy();
+                                          const auto notb = std::make_shared<NegExpression>(b2, expr);
+
+                                          expr->lhs = std::make_shared<BinaryExpression>(nota, b, BinaryExpression::Or, expr);
+                                          expr->rhs = std::make_shared<BinaryExpression>(notb, a2, BinaryExpression::Or, expr);
+                                          expr->op  = BinaryExpression::And;
+                                      }
+                                      return true;
+                                  },
+                                   [](auto &&) { return true; }, [](auto &&) { return false; }, [](auto &&) { return false; } };
+
+    OverloadedVisitor nnf{ [](std::shared_ptr<BinaryExpression> expr) {
+                              { // clang format you good?
+                                  auto a = expr->lhs;
+                                  auto b = expr->rhs;
+                                  make_nnf(a);
+                                  make_nnf(b);
+                                  expr->lhs = a;
+                                  expr->rhs = b;
+                                  return false;
+                              }
+                          },
+                           [&input](std::shared_ptr<NegExpression> expr) {
+                               // Double neg
+                               if (dynamic_cast<NegExpression *>(expr->childs().front().get())) {
+                                   auto e = expr->childs().front()->childs().front();
+                                   make_nnf(e);
+                                   e->parent = input->parent;
+                                   input     = e;
+                                   return false; // Maybe false?
+                               } else if (auto *bexpr = dynamic_cast<BinaryExpression *>(expr->childs().front().get())) {
+                                   if (bexpr->op == BinaryExpression::And) {
+                                       const auto b    = bexpr->lhs;
+                                       const auto c    = bexpr->rhs;
+                                       const auto notb = std::make_shared<NegExpression>(b);
+                                       const auto notc = std::make_shared<NegExpression>(c);
+
+                                       auto notbornotc    = std::make_shared<BinaryExpression>(notb, notc, BinaryExpression::Or);
+                                       notbornotc->parent = input->parent;
+
+                                       input = notbornotc;
+                                       make_nnf(input);
+                                   } else if (bexpr->op == BinaryExpression::Or) {
+                                       const auto b    = bexpr->lhs;
+                                       const auto c    = bexpr->rhs;
+                                       const auto notb = std::make_shared<NegExpression>(b);
+                                       const auto notc = std::make_shared<NegExpression>(c);
+
+                                       auto notbornotc    = std::make_shared<BinaryExpression>(notb, notc, BinaryExpression::And);
+                                       notbornotc->parent = input->parent;
+
+                                       input = notbornotc;
+                                       make_nnf(input);
+                                   }
+                               }
+
+                               return false;
+                           },
+                           [](auto &&) { return false; }, [](auto &&) { return false; } };
+
+    input->visit(implremover);
+    input->visit(nnf);
+}
