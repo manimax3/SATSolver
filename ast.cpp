@@ -232,3 +232,80 @@ void make_nnf(std::shared_ptr<Expression> &input)
     input->visit(implremover);
     input->visit(nnf);
 }
+
+void make_knf(std::shared_ptr<Expression> &input, bool skipnnf)
+{
+    if (!skipnnf) {
+        make_nnf(input);
+    }
+
+    bool              isdisjunkofliterals = true;
+    OverloadedVisitor disofliterals{ [&isdisjunkofliterals](auto &&expr) {
+                                        if (expr->op != BinaryExpression::Or) {
+                                            isdisjunkofliterals = false;
+                                            return false;
+                                        }
+                                        return true;
+                                    },
+                                     [](auto &&expr) { return true; }, [](auto &&expr) { return false; },
+                                     [](auto &&expr) { return false; } };
+
+    input->visit(disofliterals);
+
+    if (isdisjunkofliterals) {
+        return;
+    }
+
+    OverloadedVisitor knftransform{
+        [&input](std::shared_ptr<BinaryExpression> expr) {
+            if (expr->op == BinaryExpression::And) {
+                auto a = expr->lhs;
+                auto b = expr->rhs;
+                make_knf(a, true);
+                make_knf(b, true);
+                a->parent = expr;
+                b->parent = expr;
+                expr->lhs = a;
+                expr->rhs = b;
+            } else if (expr->op == BinaryExpression::Or) {
+                // KNF(A or B)
+                auto a = expr->lhs;
+                auto b = expr->rhs;
+
+                if (auto abinary = dynamic_cast<BinaryExpression *>(a.get()); abinary && abinary->op == BinaryExpression::And) {
+                    // KNF((a1 and a2) or B)
+                    auto a1 = abinary->lhs;
+                    auto a2 = abinary->rhs;
+                    auto b2 = b->deepcopy();
+
+                    // a1 or b
+                    auto a1orb = std::static_pointer_cast<Expression>(std::make_shared<BinaryExpression>(a1, b, BinaryExpression::Or));
+                    make_knf(a1orb, true);
+
+                    // a2 or b
+                    auto a2orb = std::static_pointer_cast<Expression>(std::make_shared<BinaryExpression>(a2, b2, BinaryExpression::Or));
+                    make_knf(a2orb, true);
+
+                    input = std::make_shared<BinaryExpression>(a1orb, a2orb, BinaryExpression::And, input->parent);
+                } else if (auto bbinary = dynamic_cast<BinaryExpression *>(b.get()); bbinary && bbinary->op == BinaryExpression::And) {
+                    // KNF(A or (b1 and b2)
+                    auto b1 = bbinary->lhs;
+                    auto b2 = bbinary->rhs;
+                    auto a2 = a->deepcopy();
+
+                    auto b1ora = std::static_pointer_cast<Expression>(std::make_shared<BinaryExpression>(b1, a, BinaryExpression::Or));
+                    make_knf(b1ora);
+
+                    auto b2ora = std::static_pointer_cast<Expression>(std::make_shared<BinaryExpression>(b2, a, BinaryExpression::Or));
+                    make_knf(b2ora, true);
+
+                    input = std::make_shared<BinaryExpression>(b1ora, b2ora, BinaryExpression::And, input->parent);
+                }
+            }
+            return false;
+        },
+        [](auto &&expr) { return false; }, [](auto &&expr) { return false; }, [](auto &&expr) { return false; }
+    };
+
+    input->visit(knftransform);
+}

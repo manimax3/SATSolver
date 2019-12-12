@@ -337,3 +337,4 @@ public:
 }
 
 void make_nnf(std::shared_ptr<Expression> &input);
+void make_knf(std::shared_ptr<Expression> &input, bool skipnnf = false);
