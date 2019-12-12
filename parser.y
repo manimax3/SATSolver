@@ -41,6 +41,8 @@ yy::parser::symbol_type yylex();
 %token NNF
 %token KNF
 
+%token <std::string> EXPRNAME
+
 %token EndOfFile 0
 
 %type <std::shared_ptr<Expression>> expression
@@ -65,6 +67,7 @@ setstmt : SET ':' PREDICATE TRUE { $$ = new Statement($3, std::make_shared<Const
 		| SET PREDICATE TRUE { $$ = new Statement($2, std::make_shared<ConstantExpression>(false)); }
 		| SET PREDICATE FALSE { $$ = new Statement($2, std::make_shared<ConstantExpression>(false)); }
 		| SET PREDICATE ':' expression { $$ = new Statement($2, $4); }
+		| SET EXPRNAME ':' expression { $$ = new Statement($2, $4, true); }
 
 printstmt : PRINT ':' expression { $$ = new Statement($3); }
 		  | PRINT expression { $$ = new Statement($2); }
@@ -74,6 +77,7 @@ printstmt : PRINT ':' expression { $$ = new Statement($3); }
 		  | PRINT KNF expression { $$ = new Statement($3, Statement::PrintKNF); }
 
 expression : PREDICATE {$$ = std::make_shared<PredExpression>($1); }
+		   | EXPRNAME { $$ = std::make_shared<NamedExpression>($1); }
 		   | TRUE { $$ = std::make_shared<ConstantExpression>(true); }
 		   | FALSE { $$ = std::make_shared<ConstantExpression>(false); }
 		   | expression IMPLICATION expression {$$ = std::make_shared<BinaryExpression>($1, $3, BinaryExpression::Impl);}

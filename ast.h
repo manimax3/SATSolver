@@ -16,6 +16,8 @@ overloaded(Ts...)->overloaded<Ts...>;
 
 struct EvaluationContext {
     std::map<std::string, bool> predicates;
+
+    std::map<std::string, std::shared_ptr<class Expression>> namedexpressions;
 };
 
 class Expression;
@@ -25,7 +27,7 @@ public:
 
     Statement();
     Statement(std::shared_ptr<Expression> other, Type type = Type::Print);
-    Statement(const std::string &pred, std::shared_ptr<Expression> other);
+    Statement(const std::string &pred, std::shared_ptr<Expression> other, bool isnamedexpr = false);
 
     virtual ~Statement();
 
@@ -33,9 +35,13 @@ public:
     virtual void exec(EvaluationContext &ec);
 
 protected:
+    bool                        namedexpr = false;
     Type                        type;
     std::string                 pred;
     std::shared_ptr<Expression> other;
+
+private:
+    static void decay_named_expressions(EvaluationContext &ec, std::shared_ptr<Expression> &input);
 };
 
 class Expression : public Statement, public std::enable_shared_from_this<Expression> {
@@ -46,7 +52,7 @@ public:
     }
     virtual ~Expression() = default;
     void        exec(EvaluationContext &ec) {}
-    virtual int eval(EvaluationContext &ec) = 0;
+    virtual int eval(EvaluationContext &ec) { return 0; };
     virtual int print() { return 0; };
 
     virtual std::list<std::string>                 atoms() const { return {}; };
@@ -73,6 +79,7 @@ public:
     virtual bool operator()(std::shared_ptr<class NegExpression> exp) { return true; }
     virtual bool operator()(std::shared_ptr<class ConstantExpression> exp) { return true; }
     virtual bool operator()(std::shared_ptr<class PredExpression> exp) { return true; }
+    virtual bool operator()(std::shared_ptr<class NamedExpression> exp) { return true; }
 };
 
 template<typename BE, typename NE, typename CE, typename PE>
@@ -211,6 +218,22 @@ private:
     std::string name;
 };
 
+class NamedExpression : public CRTPExpression<NamedExpression> {
+public:
+    NamedExpression(std::string name, std::weak_ptr<Expression> parent = {})
+        : CRTPExpression(std::move(parent))
+        , name(std::move(name))
+    {
+    }
+
+    std::shared_ptr<Expression> decay(EvaluationContext &ec) const { return ec.namedexpressions[name]->deepcopy(); };
+
+    std::shared_ptr<Expression> deepcopy() const override { return (std::make_shared<NamedExpression>(name, parent)); }
+
+private:
+    std::string name;
+};
+
 class ConstantExpression : public CRTPExpression<ConstantExpression> {
 public:
     ConstantExpression(bool value, std::weak_ptr<Expression> parent = {})
@@ -325,16 +348,6 @@ class SimplePrintWalker : public Visitor {
         return true;
     }
 };
-
-namespace nnf {
-class Walker : public Visitor {
-public:
-    bool operator()(std::shared_ptr<BinaryExpression> e) override { return false; }
-    bool operator()(std::shared_ptr<NegExpression> e) override { return false; }
-    bool operator()(std::shared_ptr<PredExpression> e) override { return false; }
-    bool operator()(std::shared_ptr<ConstantExpression> e) override { return false; }
-};
-}
 
 void make_nnf(std::shared_ptr<Expression> &input);
 void make_knf(std::shared_ptr<Expression> &input, bool skipnnf = false);

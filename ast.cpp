@@ -33,10 +33,11 @@ Statement::Statement(std::shared_ptr<Expression> other, Type type)
     this->other->update_parents();
 }
 
-Statement::Statement(const std::string &pred, std::shared_ptr<Expression> other)
+Statement::Statement(const std::string &pred, std::shared_ptr<Expression> other, bool isnamedexpr)
     : type(Set)
     , pred(pred)
     , other(std::move(other))
+    , namedexpr(isnamedexpr)
 {
     this->other->update_parents();
 }
@@ -64,9 +65,14 @@ void Statement::exec(EvaluationContext &ec)
         other->print();
         printf(" ⇒ %s\n", other->eval(ec) ? "tt" : "ff");
         break;
-    case Type::Set:
-        ec.predicates[pred] = other->eval(ec);
+    case Type::Set: {
+        if (namedexpr) {
+            ec.namedexpressions[pred] = other;
+        } else {
+            ec.predicates[pred] = other->eval(ec);
+        }
         break;
+    }
     case Type::PrintAtoms: {
         const auto atoms = other->atoms();
         printf("Atoms in ");
@@ -159,6 +165,37 @@ void Statement::exec(EvaluationContext &ec)
     }
     default:
         break;
+    }
+}
+
+// TODO Use the lambda verson for this
+struct NamedExpressionVisitor : public Visitor {
+
+    NamedExpressionVisitor(std::shared_ptr<Expression> &input, EvaluationContext &ec)
+        : input(input)
+        , ec(ec)
+    {
+    }
+
+    bool operator()(std::shared_ptr<NamedExpression> expr) override
+    {
+        ;
+        return true;
+    }
+
+    std::shared_ptr<Expression> &input;
+    EvaluationContext &          ec;
+};
+
+void Statement::decay_named_expressions(EvaluationContext &ec, std::shared_ptr<Expression> &input)
+{
+    if (auto nexpr = dynamic_cast<NamedExpression *>(input.get()); nexpr) {
+        auto decayed    = nexpr->decay(ec);
+        decayed->parent = input->parent;
+    }
+
+    for (auto &&c : input->childs()) {
+        decay_named_expressions(ec, c);
     }
 }
 

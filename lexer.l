@@ -23,6 +23,7 @@ YY_DECL;
 (?i:nnf) { return yy::parser::make_NNF(); }
 (?i:knf) { return yy::parser::make_KNF(); }
 
+$([a-zA-Z0-9])+ { return yy::parser::make_EXPRNAME(std::string(yytext)); }
 [a-zA-Z]([a-zA-Z0-9])* { return yy::parser::make_PREDICATE(std::string(yytext));}
 [ \t\n] { ; }
 . { return *yytext;}
